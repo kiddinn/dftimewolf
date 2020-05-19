@@ -5,6 +5,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import re
+import requests
 
 from timesketch_import_client import importer
 
@@ -51,7 +52,17 @@ class TimesketchExporter(module.BaseModule):
       analyzers (Optional[List[str]): If provided a list of analyzer names
           to run on the sketch after they've been imported to Timesketch.
     """
-    self.timesketch_api = timesketch_utils.GetApiClient(self.state)
+    try:
+      self.timesketch_api = timesketch_utils.GetApiClient(self.state)
+    except (requests.ConnectionError, requests.ConnectTimeout):
+      message = 'Could not connect to the Timesketch server.'
+      self.state.AddError(message, critical=True)
+      return
+    except IOError as e:
+      message = (
+          'Unable to connect to Timesketch, credential issue: {0!s}'.format(e))
+      self.state.AddError(message, critical=True)
+      return
     self.incident_id = None
     self.sketch_id = int(sketch_id) if sketch_id else None
     sketch = None
